@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Keterbukaan Informasi Publik (KIP)</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background: #f4f7f6; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .question { margin-bottom: 15px; font-weight: bold; }
+        .options { margin-bottom: 20px; }
+        button { background: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
+        button:hover { background: #218838; }
+        input[type="text"] { width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<div class="card" id="login-screen">
+    <h2>Aplikasi Kuis KIP</h2>
+    <input type="text" id="nama" placeholder="Nama Lengkap" required>
+    <input type="text" id="instansi" placeholder="Asal Instansi" required>
+    <button onclick="mulaiKuis()">Mulai Kuis</button>
+</div>
+
+<div class="card" id="quiz-screen" style="display: none;">
+    <h3 id="q-number">Pertanyaan 1/50</h3>
+    <div class="question" id="q-text"></div>
+    <div class="options" id="q-options"></div>
+    <button onclick="nextQuestion()">Selanjutnya</button>
+</div>
+
+<div class="card" id="result-screen" style="display: none;">
+    <h2>Kuis Selesai!</h2>
+    <p>Skor Anda: <strong id="final-score"></strong> dari 100</p>
+    <p>Hasil telah otomatis terkirim dan dapat dipantau oleh admin.</p>
+</div>
+
+<script>
+    // URL dari Google Apps Script (Langkah 1)
+    const scriptURL = 'URL_WEB_APP_ANDA_DISINI'; 
+
+    // Bank Soal (Berisi 50 Pertanyaan tentang UU KIP No. 14 Tahun 2008)
+    const questions = [
+        { q: "1. Undang-Undang yang mengatur tentang Keterbukaan Informasi Publik adalah?", options: ["UU No. 14 Tahun 2008", "UU No. 11 Tahun 2008", "UU No. 25 Tahun 2009", "UU No. 40 Tahun 1999"], answer: 0 },
+        { q: "2. Pejabat yang bertanggung jawab di bidang penyimpanan, pendokumentasian, dan pelayanan informasi di badan publik disebut?", options: ["PNS", "PPID", "Humas", "Komisi Informasi"], answer: 1 },
+        { q: "3. Berikut ini adalah informasi yang dikecualikan (tidak boleh diakses publik), KECUALI:", options: ["Rahasia Negara", "Rahasia Pribadi", "Informasi Pengadaan Barang dan Jasa", "Rahasia Persaingan Usaha"], answer: 2 },
+        { q: "4. Berapa lama batas waktu Badan Publik wajib memberikan pemberitahuan tertulis sejak permohonan informasi diterima?", options: ["7 hari kerja", "10 hari kerja", "14 hari kerja", "30 hari kerja"], answer: 1 },
+        { q: "5. Lembaga mandiri yang berfungsi menyelesaikan Sengketa Informasi Publik adalah?", options: ["Ombudsman", "Komisi Informasi", "Pengadilan TUN", "Komnas HAM"], answer: 1 },
+        // ... (Tambahkan sisa pertanyaan hingga 50 sesuai format di atas) ...
+        { q: "50. Sanksi pidana dapat dikenakan kepada Badan Publik yang sengaja tidak menyediakan informasi publik berupa...", options: ["Teguran lisan", "Denda dan/atau kurungan", "Pemecatan", "Penundaan anggaran"], answer: 1 }
+    ];
+
+    let currentQ = 0;
+    let score = 0;
+    let nama = "";
+    let instansi = "";
+
+    function mulaiKuis() {
+        nama = document.getElementById("nama").value;
+        instansi = document.getElementById("instansi").value;
+        if (!nama || !instansi) return alert("Isi data diri terlebih dahulu!");
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("quiz-screen").style.display = "block";
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        let q = questions[currentQ];
+        document.getElementById("q-number").innerText = `Pertanyaan ${currentQ + 1} / ${questions.length}`;
+        document.getElementById("q-text").innerText = q.q;
+        let optionsHTML = "";
+        q.options.forEach((opt, index) => {
+            optionsHTML += `<label><input type="radio" name="answer" value="${index}"> ${opt}</label><br><br>`;
+        });
+        document.getElementById("q-options").innerHTML = optionsHTML;
+    }
+
+    function nextQuestion() {
+        let selected = document.querySelector('input[name="answer"]:checked');
+        if (!selected) return alert("Pilih jawaban terlebih dahulu!");
+        
+        if (parseInt(selected.value) === questions[currentQ].answer) {
+            score++;
+        }
+
+        currentQ++;
+        if (currentQ < questions.length) {
+            loadQuestion();
+        } else {
+            selesaiKuis();
+        }
+    }
+
+    function selesaiKuis() {
+        document.getElementById("quiz-screen").style.display = "none";
+        document.getElementById("result-screen").style.display = "block";
+        
+        // Hitung skor skala 100
+        let finalScore = (score / questions.length) * 100;
+        document.getElementById("final-score").innerText = finalScore.toFixed(0);
+
+        // Kirim data ke Google Sheets secara background
+        let formData = new FormData();
+        formData.append("nama", nama);
+        formData.append("instansi", instansi);
+        formData.append("skor", finalScore);
+
+        fetch(scriptURL, { method: 'POST', body: formData })
+            .then(response => console.log('Sukses terkirim', response))
+            .catch(error => console.error('Error!', error.message));
+    }
+</script>
+
+</body>
+</html>
